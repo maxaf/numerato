@@ -1,3 +1,6 @@
+import java.nio.file._
+import java.nio.file.attribute._
+
 lazy val baseSettings = Seq(
   organization := "com.bumnetworks",
   version := "0.0.1-SNAPSHOT",
@@ -27,7 +30,6 @@ lazy val core = project
   .settings(deps)
   .settings(name := "numerato", moduleName := "numerato")
   .settings(updateReadme := {
-    import java.nio.file._
     val README = "README.md"
     tut.value.foreach {
       case (generated, README) =>
@@ -40,6 +42,12 @@ lazy val core = project
     }
   })
 
+lazy val cleanClasses = taskKey[Unit]("clean out compiled classes")
+
+lazy val recompile = taskKey[Unit]("clean out test classes & recompile")
+
+lazy val retest = taskKey[Unit]("clean out test classes & retest")
+
 lazy val tests = project
   .in(file("tests"))
   .settings(baseSettings)
@@ -47,7 +55,19 @@ lazy val tests = project
   .settings(name := "tests", moduleName := "numerato-tests")
   .settings(publish := {})
   .dependsOn(core)
-
+  .settings((cleanClasses in Test) := {
+    Files.walkFileTree(
+      Paths.get((classDirectory in Test).value.toURI),
+      new SimpleFileVisitor[Path] {
+        override def visitFile(file: Path, attrs: BasicFileAttributes) = {
+          Files.delete(file)
+          FileVisitResult.CONTINUE
+        }
+      }
+    )
+  })
+  .settings(recompile in Test := Def.sequential(cleanClasses in Test, compile in Test).value)
+  .settings(retest in Test := Def.sequential(cleanClasses in Test, test in Test).value)
 
 lazy val numerato = project
   .aggregate(core, tests)
