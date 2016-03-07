@@ -1,14 +1,9 @@
 package tests
 
 import scala.util.Try
-import numerato._
 import org.specs2._
 import org.specs2.execute._, Typecheck._
 import org.specs2.matcher.TypecheckMatchers._
-
-@enum class Status {
-  val Enabled, Disabled = Value
-}
 
 class NumeratoSpec extends Specification {
   def is = s2"""
@@ -21,6 +16,7 @@ class NumeratoSpec extends Specification {
 
     invalid cases must not compile:
       incomplete match                      $incompleteMatch
+      illegal subtype of enum               $illegalSubtype
 
     invalid cases must not run:
       invalid index lookup                  $invalidIndexLookup
@@ -38,6 +34,12 @@ class NumeratoSpec extends Specification {
       case Status.Enabled => true
     }
   } must beFailedTry.withThrowable[MatchError]
+
+  val illegalSubtype = typecheck {
+    """
+      case object DevilMayCare extends Status(666, "not in this life")
+    """
+  } must not succeed
 
   val invalidIndexLookup = Try(Status.fromIndex(10)) must beFailedTry.withThrowable[NoSuchElementException]
   val invalidNameLookup = Try(Status.fromName("foo")) must beFailedTry.withThrowable[NoSuchElementException]
