@@ -60,7 +60,8 @@ Give the above `Status` class, here's what the generated code looks like:
 ```scala
 sealed abstract class Status(val index: Int, val name: String)(implicit sealant: Status.Sealant);
 object Status {
-  @scala.annotation.implicitNotFound(msg = "Enum types annotated with @enum can not be extended directly. To add another value to the enum, please adjust your `def ... = Value` declaration.") sealed abstract protected class Sealant;
+  @scala.annotation.implicitNotFound(msg = "Enum types annotated with @enum can not be extended directly. To add another value to the enum, please adjust your `def ... = Value` declaration.")
+  sealed abstract protected class Sealant;
   implicit protected object Sealant extends Sealant;
   case object Enabled extends Status(0, "Enabled") with scala.Product with scala.Serializable;
   case object Disabled extends Status(1, "Disabled") with scala.Product with scala.Serializable;
