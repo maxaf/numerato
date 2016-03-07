@@ -10,7 +10,7 @@ lazy val baseSettings = Seq(
     "-deprecation",
     "-unchecked",
     "-feature",
-    "-language:experimental.macros")) ++ scalariformSettings
+    "-language:experimental.macros")) ++ scalariformSettings ++ tutSettings
 
 lazy val deps = Seq(
  libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-reflect" % _),

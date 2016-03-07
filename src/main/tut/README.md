@@ -7,7 +7,7 @@ lack the gift of tongues)
 
 Everyone knows this, but I felt the need to point out the obvious:
 
-```scala
+```tut:book
 // - singleton type tedious to use as an actual *type*
 // - why should I extend some mysterious class?
 object CrustyStatus extends Enumeration {
@@ -15,25 +15,22 @@ object CrustyStatus extends Enumeration {
 
   val Enabled, Disabled = Value // this is probably the nicest part of `Enumeration`
 }
-// defined object CrustyStatus
 
 // without this import I won't be able to access the `CrustyStatus` non-singleton type
 import CrustyStatus._
-// import CrustyStatus._
 
 def isEnabled(s: CrustyStatus) = s match {
   case Enabled => true
   // non-exhaustive match not caught at compile time...
   // ...seriously, doesn't even emit a warning
 }
-// isEnabled: (s: CrustyStatus.CrustyStatus)Boolean
 ```
 
 ## Could we do better?
 
 Of course! When in doubt, generate it with macros:
 
-```scala
+```tut:silent
 import numerato._
 ```
 
@@ -42,12 +39,10 @@ import numerato._
 Simply create a plain class, annotate it with `@enum`, and use the familiar
 `val ... = Value` declaration to define a few enum values:
 
-```scala
+```tut:book
 @enum class Status {
   val Enabled, Disabled = Value
 }
-// defined class Status
-// defined object Status
 ```
 
 The `@enum` annotation invokes a macro, which will:
@@ -85,15 +80,10 @@ The main attraction is being able to `match {}` against an enum type & be
 warned by the compiler about non-exhaustive matches. As shown way above,
 `scala.Enumeration` doesn't support this, but `@enum` types do! Check this out:
 
-```scala
+```tut:book
 def isEnabled(s: Status) = s match {
   case Status.Enabled => true
 }
-// <console>:22: warning: match may not be exhaustive.
-// It would fail on the following input: Disabled
-//        def isEnabled(s: Status) = s match {
-//                                   ^
-// isEnabled: (s: Status)Boolean
 ```
 
 Non-exhaustive matches are still possible, but at least you'll be warned at
@@ -106,22 +96,18 @@ Enumeration values have numeric indexes, string names (no more
 methods that safely and easily turn indexes and names into instances of the
 annotated type.
 
-```scala
+```tut:book
 // each enum value has a auto-detected name
 Status.Disabled.name
-// res4: String = Disabled
 
 // you can look up values by name
 Status.fromName(Status.Enabled.name)
-// res6: Status = Enabled
 
 // or by the auto-generated zero-based index
 Status.fromIndex(Status.Disabled.index)
-// res8: Status = Disabled
 
 // iterate over all values as needed
 Status.values
-// res10: List[Status] = List(Enabled, Disabled)
 ```
 
 #### Safety & hygiene
