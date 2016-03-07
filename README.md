@@ -97,3 +97,7 @@ scala> object Undecided extends Status(-1, "make my day")
 <console>:19: error: illegal inheritance from sealed class Status
        object Undecided extends Status(-1, "make my day")
 ```
+
+Note that deriving from an `@enum`-annotated type is disallowed even within the
+same compilation unit. To add new values to the enum, simply adjust your `val
+... = Value` declaration.

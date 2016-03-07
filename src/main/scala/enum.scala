@@ -18,11 +18,15 @@ class EnumMacros(val c: whitebox.Context) {
           case _ => Nil
         }
         val bodyParts = values.zipWithIndex.map {
-          case (value, index) => q"""case object $value extends $enumType($index, ${s"$value"})"""
+          case (value, index) =>
+            q"""case object $value extends $enumType($index, ${s"$value"})"""
         }
         q"""
-          sealed abstract class $enumType(val index: Int, val name: String)
+          sealed abstract class $enumType(val index: Int, val name: String)(implicit sealant: ${enumType.toTermName}.Sealant)
           object ${enumType.toTermName} {
+            @scala.annotation.implicitNotFound(msg = "Enum types annotated with @enum can not be extended directly. To add another value to the enum, please adjust your `def ... = Value` declaration.")
+            protected sealed abstract class Sealant
+            protected implicit object Sealant extends Sealant
             ..$bodyParts
             val values: List[$enumType] = List(..$values)
             val fromIndex: Int => $enumType = Map(..${values.map(value => q"$value.index -> $value")})
