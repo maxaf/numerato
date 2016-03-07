@@ -76,8 +76,6 @@ object Status {
 };
 ```
 
-Please note that the
-
 ### Using the enumeration
 
 #### Non-exhaustive matches
