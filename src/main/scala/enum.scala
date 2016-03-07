@@ -31,6 +31,8 @@ class EnumMacros(val c: whitebox.Context) {
             val values: List[$enumType] = List(..$values)
             val fromIndex: Int => $enumType = Map(..${values.map(value => q"$value.index -> $value")})
             val fromName: String => $enumType = Map(..${values.map(value => q"$value.name -> $value")})
+            def switch[A](pf: PartialFunction[Status, A]): Status => A =
+              macro numerato.SwitchMacros.switch_impl[$enumType, A]
           }
         """
     }

@@ -1,5 +1,3 @@
-package tests
-
 import scala.util.Try
 import org.specs2._
 import org.specs2.execute._, Typecheck._
@@ -16,6 +14,12 @@ class NumeratoSpec extends Specification {
 
     invalid cases must not compile:
       incomplete match                      $incompleteMatch
+      complete wildcard match               $wildcardCompleteMatch
+      incomplete wildcard match w/guard     $wildcardIncompleteMatch
+      lonely wildcard match w/guard         $wildcardIncompleteMatchAlone
+      complete match                        $completeMatch
+      incomplete match w/guard              $incompleteGuardedMatch
+      incomplete match w/guard & w/wildcard $incompleteGuardedMatch
       illegal subtype of enum               $illegalSubtype
 
     invalid cases must not run:
@@ -24,16 +28,76 @@ class NumeratoSpec extends Specification {
   """
 
   val validSingleton = Status must beAnInstanceOf[Status.type]
-  val uniqueValues = Status.values.toSet must have length (2)
-  val uniqueIndexes = Status.values.map(_.index).toSet must have length (2)
+  val uniqueValues = Status.values.toSet must have length (6)
+  val uniqueIndexes = Status.values.map(_.index).toSet must have length (6)
   val lookupByIndex = Status.fromIndex(0) must_== Status.Enabled
   val lookupByName = Status.fromName("Disabled") must_== Status.Disabled
 
-  val incompleteMatch = Try {
-    (Status.Disabled: Status) match {
-      case Status.Enabled => true
-    }
-  } must beFailedTry.withThrowable[MatchError]
+  val incompleteMatch = typecheck {
+    """
+      import Status._
+      Status switch {
+        case Status.Enabled => true
+      }
+    """
+  } must not succeed
+
+  val wildcardCompleteMatch = typecheck {
+    """Status switch {
+      case _ => true
+    }"""
+  } must succeed
+
+  val wildcardIncompleteMatchAlone = typecheck {
+    """Status switch {
+      case _ if System.currentTimeMillis % 2 == 0 => true
+    }"""
+  } must not succeed
+
+  val wildcardIncompleteMatch = typecheck {
+    """
+      Status switch {
+        case Enabled => "green"
+        case Deferred | Pending => "yellow"
+        case Disabled | Unknown | Challenged => "red"
+        case _ if System.currentTimeMillis % 2 == 0 => true
+      }
+    """
+  } must not succeed
+
+  val completeMatch = typecheck {
+    """
+      import Status._
+      Status switch {
+        case Enabled => "green"
+        case Deferred | Pending => "yellow"
+        case Disabled | Unknown | Challenged => "red"
+      }
+    """
+  } must succeed
+
+  val incompleteGuardedMatch = typecheck {
+    """
+      import Status._
+      Status switch {
+        case Enabled if true => "green"
+        case Deferred | Pending => "yellow"
+        case Disabled | Unknown | Challenged => "red"
+      }
+    """
+  } must not succeed
+
+  val incompleteGuardedMatchWithWildcard = typecheck {
+    """
+      import Status._
+      Status switch {
+        case Enabled if true => "green"
+        case Deferred | Pending => "yellow"
+        case Disabled | Unknown | Challenged => "red"
+        case _ => "grey"
+      }
+    """
+  } must not succeed
 
   val illegalSubtype = typecheck {
     """

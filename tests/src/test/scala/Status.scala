@@ -1,7 +1,5 @@
-package tests
-
 import numerato._
 
 @enum class Status {
-  val Enabled, Disabled = Value
+  val Enabled, Disabled, Deferred, Unknown, Pending, Challenged = Value
 }
