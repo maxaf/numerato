@@ -40,15 +40,7 @@ import numerato._
 ### Declaring an enumeration
 
 Simply create a plain class, annotate it with `@enum`, and use the familiar
-`val ... = Value` declaration to define a few enum values:
-
-```scala
-@enum class Status {
-  val Enabled, Disabled = Value
-}
-// defined class Status
-// defined object Status
-```
+`val ... = Value` declaration to define a few enum values.
 
 The `@enum` annotation invokes a macro, which will:
 
@@ -60,43 +52,128 @@ The `@enum` annotation invokes a macro, which will:
   that now make `Status` an enumeration. This includes a `values:
   List[Status]`, plus lookup methods.
 
-Give the above `Status` class, here's what the generated code looks like:
+Give the above `Status` enum, here's what the generated code looks like:
 
 ```scala
-sealed abstract class Status(val index: Int, val name: String)(implicit sealant: Status.Sealant);
-object Status {
-  @scala.annotation.implicitNotFound(msg = "Enum types annotated with @enum can not be extended directly. To add another value to the enum, please adjust your `def ... = Value` declaration.")
-  sealed abstract protected class Sealant;
-  implicit protected object Sealant extends Sealant;
-  case object Enabled extends Status(0, "Enabled") with scala.Product with scala.Serializable;
-  case object Disabled extends Status(1, "Disabled") with scala.Product with scala.Serializable;
-  val values: List[Status] = List(Enabled, Disabled);
-  val fromIndex: _root_.scala.Function1[Int, Status] = Map(Enabled.index.->(Enabled), Disabled.index.->(Disabled));
-  val fromName: _root_.scala.Function1[String, Status] = Map(Enabled.name.->(Enabled), Disabled.name.->(Disabled))
-};
+scala> @enum class Status {
+     |   val Enabled, Disabled = Value
+     | }
+{
+  sealed abstract class Status(val index: Int, val name: String)(implicit sealant: Status.Sealant);
+  object Status {
+    @scala.annotation.implicitNotFound(msg = "Enum types annotated with @enum can not be extended directly. To add another value to the enum, please adjust your `def ... = Value` declaration.") sealed abstract protected class Sealant;
+    implicit protected object Sealant extends Sealant;
+    case object Enabled extends Status(0, "Enabled") with scala.Product with scala.Serializable;
+    case object Disabled extends Status(1, "Disabled") with scala.Product with scala.Serializable;
+    val values: List[Status] = List(Enabled, Disabled);
+    val fromIndex: _root_.scala.Function1[Int, Status] = Map(Enabled.index.->(Enabled), Disabled.index.->(Disabled));
+    val fromName: _root_.scala.Function1[String, Status] = Map(Enabled.name.->(Enabled), Disabled.name.->(Disabled));
+    def switch[A](pf: PartialFunction[Status, A]): _root_.scala.Function1[Status, A] = macro numerato.SwitchMacros.switch_impl[Status, A]
+  };
+  ()
+}
+defined class Status
+defined object Status
 ```
 
 ### Using the enumeration
 
-#### Non-exhaustive matches
+#### The `switch` statement
 
-The main attraction is being able to `match {}` against an enum type & be
-warned by the compiler about non-exhaustive matches. As shown way above,
-`scala.Enumeration` doesn't support this, but `@enum` types do! Check this out:
+The `@enum`-generated companion comes with a `switch` construct that can be
+used similarly to Scala's built-in `match` statement, but comes with additional
+compile-time safety checks. Here's how it's used:
 
 ```scala
-def isEnabled(s: Status) = s match {
-  case Status.Enabled => true
-}
-// <console>:22: warning: match may not be exhaustive.
-// It would fail on the following input: Disabled
-//        def isEnabled(s: Status) = s match {
-//                                   ^
-// isEnabled: (s: Status)Boolean
+scala> import Status._
+import Status._
+
+scala> val statuses = Enabled :: Disabled :: Enabled :: Enabled :: Disabled :: Nil
+statuses: List[Product with Serializable with Status] = List(Enabled, Disabled, Enabled, Enabled, Disabled)
+
+scala> statuses.map(Status switch {
+     |   case Status.Disabled => "not working"
+     |   case Status.Enabled  => "working for sure"
+     | })
+res3: List[String] = List(working for sure, not working, working for sure, working for sure, not working)
+```
+
+From the above follows that the return type of `switch` is `Status => A`, where
+`A` is the right hand side type representing the match result. In other words,
+`switch` converts the provided partial function into a total function, and
+ensures at compile time that the total function will not throw a `MatchError`
+at runtime.
+
+In order to complete its mission, `switch` imposes certain rules on code that
+may appear within a `switch` block:
+
+* All declared enum values must be matched, either `Individually` or in
+  `Alternate | Groups` of `Absolutely | Any | Size`. In case of an incomplete
+  match an error message will be shown explaining which enum values are
+  missing:
+```scala
+scala> statuses.map(Status switch {
+     |   case Status.Disabled => "not working"
+     | })
+<console>:27: error: not all values of Status are covered: Enabled
+       statuses.map(Status switch {
+                                  ^
+```
+* If you don't wish to specify all enum values, you must include a wildcard
+  pattern that will act as a catch-all, thus making the match total:
+```scala
+scala> statuses.map(Status switch {
+     |   case Status.Disabled => "not working"
+     |   case _ => "-unknown-"
+     | })
+res5: List[String] = List(-unknown-, not working, -unknown-, -unknown-, not working)
+```
+* Guards cannot be used within a `switch` construct. There are no restrictions
+  on the right hand side of a `=>` pattern, so feel free to write `if`
+  statements or other conditionals there. Guards can't be evaluated at compile
+  time, making it impossible to guarantee that the match will be complete:
+```scala
+scala> statuses.map(Status switch {
+     |   case Status.Disabled if System.currentTimeMillis % 2 == 0 => "not working"
+     |   case _ => "-unknown-"
+     | })
+<console>:28: error: potentially incomplete `Disabled` match - guards not allowed
+         case Status.Disabled if System.currentTimeMillis % 2 == 0 => "not working"
+                     ^
+```
+```scala
+scala> statuses.map(Status switch {
+     |   case Status.Disabled => "not working"
+     |   case _ if System.currentTimeMillis % 2 == 0 => "-unknown-"
+     | })
+<console>:29: error: potentially incomplete wildcard match - guards not allowed
+         case _ if System.currentTimeMillis % 2 == 0 => "-unknown-"
+              ^
+```
+
+#### Non-exhaustive regular `match`-es
+
+Scala's built-in `match` statement works with `@enum` as usual. The main
+attraction is being able to `match {}` against an enum type & be warned by the
+compiler about non-exhaustive matches. As shown way above, `scala.Enumeration`
+doesn't support this, but `@enum` types do! Check this out:
+
+```scala
+scala> def isEnabled(s: Status) = s match {
+     |   case Status.Enabled => true
+     | }
+<console>:25: warning: match may not be exhaustive.
+It would fail on the following input: Disabled
+       def isEnabled(s: Status) = s match {
+                                  ^
+isEnabled: (s: Status)Boolean
 ```
 
 Non-exhaustive matches are still possible, but at least you'll be warned at
-compile time.
+compile time. You're free to use either `switch` or `match` depending on your
+needs. Just be aware that nothing stops you from ignoring `match`
+incompleteness warnings, while `switch` will refuse to compile if something
+smells funky.
 
 #### Reflecting upon the enum
 
@@ -108,19 +185,19 @@ annotated type.
 ```scala
 // each enum value has a auto-detected name
 Status.Disabled.name
-// res4: String = Disabled
+// res9: String = Disabled
 
 // you can look up values by name
 Status.fromName(Status.Enabled.name)
-// res6: Status = Enabled
+// res11: Status = Enabled
 
 // or by the auto-generated zero-based index
 Status.fromIndex(Status.Disabled.index)
-// res8: Status = Disabled
+// res13: Status = Disabled
 
 // iterate over all values as needed
 Status.values
-// res10: List[Status] = List(Enabled, Disabled)
+// res15: List[Status] = List(Enabled, Disabled)
 ```
 
 #### Safety & hygiene
@@ -137,3 +214,6 @@ Additionally, the generated enum constructor requires an implicit `Sealant`
 parameter, which is a protected inner type of the generated companion object.
 This makes it impossible to derive from the enum type even within the same
 file.
+
+If you wish to add new values to the enum type, simply adjust the `val ... =
+Value` declaration to include more values. `@enum` will take care of the rest.
