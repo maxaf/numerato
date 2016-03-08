@@ -108,7 +108,7 @@ statuses.map(Status switch {
   time, making it impossible to guarantee that the match will be complete:
 ```tut:fail
 statuses.map(Status switch {
-  case Status.Disabled if System.currentTimeMillis % 2 == 0 => "not working"
+  case s @ Status.Disabled if s.name == "Enabled" => "not working"
   case _ => "-unknown-"
 })
 ```

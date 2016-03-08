@@ -134,12 +134,12 @@ res5: List[String] = List(-unknown-, not working, -unknown-, -unknown-, not work
   time, making it impossible to guarantee that the match will be complete:
 ```scala
 scala> statuses.map(Status switch {
-     |   case Status.Disabled if System.currentTimeMillis % 2 == 0 => "not working"
+     |   case s @ Status.Disabled if s.name == "Enabled" => "not working"
      |   case _ => "-unknown-"
      | })
 <console>:28: error: potentially incomplete `Disabled` match - guards not allowed
-         case Status.Disabled if System.currentTimeMillis % 2 == 0 => "not working"
-                     ^
+         case s @ Status.Disabled if s.name == "Enabled" => "not working"
+              ^
 ```
 ```scala
 scala> statuses.map(Status switch {

@@ -25,18 +25,26 @@ object SwitchMacros {
 
     val q"{ case ..$cases }" = pf.tree
 
+    object BarePattern {
+      def unapply(tree: Tree): Option[Tree] =
+        tree match {
+          case pq"$binding @ $pattern" => Some(pattern)
+          case pq"$pattern" => Some(pattern)
+        }
+    }
+
     val matches: List[MatchPattern] = cases.flatMap {
       case CaseDef(pattern, guard, expr) =>
         val guarded = guard.nonEmpty
         pattern match {
-          case pq"$enclosing.$member" =>
+          case BarePattern(pq"$enclosing.$member") =>
             Enum(pattern.pos, member, guarded) :: Nil
-          case pq"$enclosing.$member | ..$altern" =>
+          case BarePattern(pq"$enclosing.$member | ..$altern") =>
             Enum(pattern.pos, member, guarded) :: altern.collect {
-              case alt @ pq"$enclosing.$member" => Enum(alt.pos, member, guarded)
+              case BarePattern(alt @ pq"$enclosing.$member") => Enum(alt.pos, member, guarded)
             }
-          case wc @ pq"_" => Wildcard(wc.pos, guarded) :: Nil
-          case other => Other(other.pos) :: Nil
+          case BarePattern(wc @ pq"_") => Wildcard(wc.pos, guarded) :: Nil
+          case BarePattern(other) => Other(other.pos) :: Nil
         }
     }
 

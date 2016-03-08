@@ -21,6 +21,8 @@ class NumeratoSpec extends Specification {
       incomplete match w/guard              $incompleteGuardedMatch
       incomplete match w/guard & w/wildcard $incompleteGuardedMatch
       illegal subtype of enum               $illegalSubtype
+      complete with binding                 $completeWithBinding
+      complete w/wildcard binding           $completeWithWildcardBinding
 
     invalid cases must not run:
       invalid index lookup                  $invalidIndexLookup
@@ -98,6 +100,27 @@ class NumeratoSpec extends Specification {
       }
     """
   } must not succeed
+
+  val completeWithBinding = typecheck {
+    """
+      import Status._
+      Status switch {
+        case s @ Enabled => "green"
+        case s @ (Deferred | Pending) => "yellow"
+        case Disabled | Unknown | Challenged => "red"
+        case other => "grey"
+      }
+    """
+  } must succeed
+
+  val completeWithWildcardBinding = typecheck {
+    """
+      import Status._
+      Status switch {
+        case other => "does it matter?"
+      }
+    """
+  } must succeed
 
   val illegalSubtype = typecheck {
     """
