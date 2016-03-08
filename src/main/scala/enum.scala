@@ -3,7 +3,7 @@ package numerato
 import scala.annotation.StaticAnnotation
 import scala.reflect.macros.whitebox
 
-class enum extends StaticAnnotation {
+class enum(debug: Boolean) extends StaticAnnotation {
   def macroTransform(annottees: Any*): Any = macro EnumMacros.decl
 }
 
@@ -13,6 +13,18 @@ class EnumMacros(val c: whitebox.Context) {
   def decl(annottees: c.Expr[Any]*) = {
     annottees.map(_.tree) match {
       case tree @ List(q"class $enumType { ..$body }") =>
+        val debug = c.prefix.tree match {
+          case q"new enum(..$params)" =>
+            params.collect {
+              case q"debug = $d" => d
+              case q"$d" => d
+            }.headOption.map {
+              case q"false" => false
+              case q"true" => true
+            }.getOrElse(false)
+          case q"new enum()" => false
+          case _ => sys.error(showCode(c.prefix.tree))
+        }
         val values = body.flatMap {
           case q"""val $value = Value""" => value :: Nil
           case _ => Nil
@@ -21,7 +33,7 @@ class EnumMacros(val c: whitebox.Context) {
           case (value, index) =>
             q"""case object $value extends $enumType($index, ${s"$value"})"""
         }
-        q"""
+        val result = q"""
           sealed abstract class $enumType(val index: Int, val name: String)(implicit sealant: ${enumType.toTermName}.Sealant)
           object ${enumType.toTermName} {
             @scala.annotation.implicitNotFound(msg = "Enum types annotated with @enum can not be extended directly. To add another value to the enum, please adjust your `def ... = Value` declaration.")
@@ -35,6 +47,8 @@ class EnumMacros(val c: whitebox.Context) {
               macro numerato.SwitchMacros.switch_impl[$enumType, A]
           }
         """
+        if (debug) println(showCode(result))
+        result
     }
   }
 }

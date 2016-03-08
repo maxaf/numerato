@@ -52,10 +52,14 @@ The `@enum` annotation invokes a macro, which will:
 Give the above `Status` enum, here's what the generated code looks like:
 
 ```tut
-@enum class Status {
+@enum(debug = true) class Status {
   val Enabled, Disabled = Value
 }
 ```
+
+Note that you don't need to supply the `debug = true` part during normal use.
+This is only useful for debugging, and is passed here to facilitate output of
+generated code.
 
 ### Using the enumeration
 
