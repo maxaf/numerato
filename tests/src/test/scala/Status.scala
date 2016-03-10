@@ -5,7 +5,7 @@ import numerato._
   val Unknown, Pending, Challenged = Value
 }
 
-@enum(debug = true) class Neighborhood(zip: Int, elevation: Double) {
+@enum(debug = false) class Neighborhood(zip: Int, elevation: Double) {
   val UWS = Value(10024, 40)
   val Chelsea = Value(10011, 19)
 }

@@ -3,7 +3,7 @@ package numerato
 import scala.annotation.StaticAnnotation
 import scala.reflect.macros.whitebox
 
-class enum(debug: Boolean) extends StaticAnnotation {
+class enum(debug: Boolean = false) extends StaticAnnotation {
   def macroTransform(annottees: Any*): Any = macro EnumMacros.decl
 }
 
