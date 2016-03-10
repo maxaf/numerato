@@ -99,7 +99,7 @@ class EnumMacros(val c: whitebox.Context) {
         q"val $pname: $ptype = $pdefault"
     }
 
-  def decl(annottees: c.Expr[Any]*) = {
+  def decl(annottees: Tree*): Tree = {
     val debug = c.prefix.tree match {
       case q"new enum(..$params)" =>
         params.collect {
@@ -113,7 +113,7 @@ class EnumMacros(val c: whitebox.Context) {
       case _ => sys.error(showCode(c.prefix.tree))
     }
     val decl: EnumDeclaration =
-      annottees.map(_.tree) match {
+      annottees match {
         case tree @ List(q"class $enumType { ..$body }") =>
           new PlainEnumDeclaration(enumType, body.flatMap {
             case q"""val $value = Value""" => value :: Nil
