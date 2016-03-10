@@ -144,20 +144,16 @@ Please note that you cannot declare enum fields with the names `index` and `name
 
 ```scala
 scala> @enum class Dumb(name: Double)
-error: `name` is reserved & can not be used as a enum field
-<console>:18: error: not enough arguments for constructor enum: (debug: Boolean)numerato.enum.
-Unspecified value parameter debug.
-       @enum class Dumb(name: Double)
-        ^
+<console>:16: error: `name` is reserved & can not be used as a enum field
+object $iw {
+       ^
 ```
 
 ```scala
 scala> @enum class Dumber(index: AnyRef)
-error: `index` is reserved & can not be used as a enum field
-<console>:18: error: not enough arguments for constructor enum: (debug: Boolean)numerato.enum.
-Unspecified value parameter debug.
-       @enum class Dumber(index: AnyRef)
-        ^
+<console>:16: error: `index` is reserved & can not be used as a enum field
+object $iw {
+       ^
 ```
 
 ### Using the enumeration
@@ -199,7 +195,7 @@ may appear within a `switch` block:
 scala> statuses.map(Status switch {
      |   case Status.Disabled => "not working"
      | })
-<console>:27: error: not all values of Status are covered: Enabled
+<console>:28: error: not all values of Status are covered: Enabled
        statuses.map(Status switch {
                                   ^
 ```
@@ -221,7 +217,7 @@ scala> statuses.map(Status switch {
      |   case s @ Status.Disabled if s.name == "Enabled" => "not working"
      |   case _ => "-unknown-"
      | })
-<console>:28: error: potentially incomplete `Disabled` match - guards not allowed
+<console>:29: error: potentially incomplete `Disabled` match - guards not allowed
          case s @ Status.Disabled if s.name == "Enabled" => "not working"
               ^
 ```
@@ -230,7 +226,7 @@ scala> statuses.map(Status switch {
      |   case Status.Disabled => "not working"
      |   case _ if System.currentTimeMillis % 2 == 0 => "-unknown-"
      | })
-<console>:29: error: potentially incomplete wildcard match - guards not allowed
+<console>:30: error: potentially incomplete wildcard match - guards not allowed
          case _ if System.currentTimeMillis % 2 == 0 => "-unknown-"
               ^
 ```
@@ -246,7 +242,7 @@ doesn't support this, but `@enum` types do! Check this out:
 scala> def isEnabled(s: Status) = s match {
      |   case Status.Enabled => true
      | }
-<console>:25: warning: match may not be exhaustive.
+<console>:26: warning: match may not be exhaustive.
 It would fail on the following input: Disabled
        def isEnabled(s: Status) = s match {
                                   ^
