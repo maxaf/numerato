@@ -14,6 +14,7 @@
       - [Non-exhaustive regular `match`-es](#non-exhaustive-regular-match-es)
       - [Reflecting upon the enum](#reflecting-upon-the-enum)
       - [Safety & hygiene](#safety-&-hygiene)
+  - [Using `numerato` in your project](#using-numerato-in-your-project)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -297,3 +298,36 @@ file.
 
 If you wish to add new values to the enum type, simply adjust the `val ... =
 Value` declaration to include more values. `@enum` will take care of the rest.
+
+## Using `numerato` in your project
+
+First, add the resolver & dependency to your SBT build:
+
+```scala
+resolvers += "maxaf-releases" at s"http://repo.bumnetworks.com/releases/"
+
+libraryDependencies += "com.bumnetworks" %% "numerato" % "0.0.1"
+```
+
+Next, enable macros & add a dependency on Macro Paradise:
+
+```scala
+resolvers += Resolver.sonatypeRepo("releases")
+
+addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
+
+scalacOptions += "-language:experimental.macros"
+```
+
+At last, proceed to define your enumerations as above:
+
+```scala
+scala> import numerato._
+import numerato._
+
+scala> @enum class Foo {
+     |   val Bar, Baz, Quux = Value
+     | }
+defined class Foo
+defined object Foo
+```

@@ -4,7 +4,7 @@ import macroRevolver._
 
 lazy val baseSettings = Seq(
   organization := "com.bumnetworks",
-  version := "0.0.1-SNAPSHOT",
+  version := "0.0.1",
   scalaVersion := "2.11.8",
   initialCommands := """
     import numerato._
@@ -19,6 +19,16 @@ lazy val deps = Seq(
  libraryDependencies ++= Seq(
     "org.specs2" %% "specs2-core" % "3.7.2" % "test",
     "org.specs2" %% "specs2-matcher-extra" % "3.7.2" % "test"))
+
+lazy val publishSettings = Seq(
+  publishTo <<= (version) {
+    v =>
+    val repo = file(".") / ".." / "repo"
+    Some(Resolver.file("repo",
+      if (v.trim.endsWith("SNAPSHOT")) repo / "snapshots"
+      else repo / "releases"))
+  }
+)
 
 lazy val updateReadme = taskKey[Unit]("copy tut-generated README.md to project root")
 
@@ -40,6 +50,7 @@ lazy val core = project
       case _ =>
     }
   })
+  .settings(publishSettings)
 
 lazy val tests = project
   .in(file("tests"))
