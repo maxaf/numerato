@@ -27,6 +27,8 @@ class NumeratoSpec extends Specification {
     invalid cases must not run:
       invalid index lookup                  $invalidIndexLookup
       invalid name lookup                   $invalidNameLookup
+
+    enum values must (de)serialize          $javaSerialization
   """
 
   val validSingleton = Status must beAnInstanceOf[Status.type]
@@ -130,4 +132,13 @@ class NumeratoSpec extends Specification {
 
   val invalidIndexLookup = Try(Status.fromIndex(10)) must beFailedTry.withThrowable[NoSuchElementException]
   val invalidNameLookup = Try(Status.fromName("foo")) must beFailedTry.withThrowable[NoSuchElementException]
+
+  val javaSerialization = {
+    import java.io._
+    val out = new PipedOutputStream()
+    val in = new PipedInputStream(out)
+    new ObjectOutputStream(out).writeObject(Status.Enabled)
+    val read = new ObjectInputStream(in).readObject().asInstanceOf[Status]
+    read must_== Status.Enabled
+  }
 }

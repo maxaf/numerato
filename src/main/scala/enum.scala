@@ -55,7 +55,7 @@ class EnumMacros(val c: whitebox.Context) {
 
     protected val base: Tree =
       q"""
-        sealed abstract class $enumType(val index: Int, val name: String)(implicit sealant: ${enumType.toTermName}.Sealant)
+        sealed abstract class $enumType(val index: Int, val name: String)(implicit sealant: ${enumType.toTermName}.Sealant) extends Serializable
       """
 
     protected def value(name: TermName, index: Int): Tree =
@@ -82,7 +82,7 @@ class EnumMacros(val c: whitebox.Context) {
 
     protected def base =
       q"""
-        sealed abstract class $enumType(..$params, val index: Int, val name: String)(implicit sealant: ${enumType.toTermName}.Sealant)
+        sealed abstract class $enumType(..$params, val index: Int, val name: String)(implicit sealant: ${enumType.toTermName}.Sealant) extends Serializable
       """
 
     protected def value(name: TermName, index: Int): Tree = {
