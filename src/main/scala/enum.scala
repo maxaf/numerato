@@ -13,6 +13,8 @@ class EnumMacros(val c: whitebox.Context) {
   sealed trait EnumDeclaration {
     val enumType: TypeName
     val values: List[TermName]
+    val mods: Modifiers
+    val parents: List[Tree]
 
     def validate: Unit
     protected def base: Tree
@@ -49,13 +51,16 @@ class EnumMacros(val c: whitebox.Context) {
 
   class PlainEnumDeclaration(
       val enumType: TypeName,
-      val values: List[TermName]
+      val values: List[TermName],
+      val mods: Modifiers,
+      val parents: List[Tree]
   ) extends EnumDeclaration {
     def validate = ()
 
+    private val newMods = Modifiers(mods.flags | Flag.SEALED | Flag.ABSTRACT, mods.privateWithin, mods.annotations)
     protected val base: Tree =
       q"""
-        sealed abstract class $enumType(val index: Int, val name: String)(implicit sealant: ${enumType.toTermName}.Sealant) extends Serializable
+        $newMods class $enumType(val index: Int, val name: String)(implicit sealant: ${enumType.toTermName}.Sealant) extends ..$parents with Serializable
       """
 
     protected def value(name: TermName, index: Int): Tree =
@@ -67,7 +72,9 @@ class EnumMacros(val c: whitebox.Context) {
   class ParametricEnumDeclaration(
       val enumType: TypeName,
       val params: List[ValDef],
-      val valueDecls: List[ValueDecl]
+      val valueDecls: List[ValueDecl],
+      val mods: Modifiers,
+      val parents: List[Tree]
   ) extends EnumDeclaration {
     val values = valueDecls.map(_.name)
 
@@ -80,9 +87,10 @@ class EnumMacros(val c: whitebox.Context) {
       }
     }
 
+    private val newMods = Modifiers(mods.flags | Flag.SEALED | Flag.ABSTRACT, mods.privateWithin, mods.annotations)
     protected def base =
       q"""
-        sealed abstract class $enumType(..$params, val index: Int, val name: String)(implicit sealant: ${enumType.toTermName}.Sealant) extends Serializable
+        $newMods class $enumType(..$params, val index: Int, val name: String)(implicit sealant: ${enumType.toTermName}.Sealant) extends ..$parents with Serializable
       """
 
     protected def value(name: TermName, index: Int): Tree = {
@@ -114,20 +122,23 @@ class EnumMacros(val c: whitebox.Context) {
     }
     val decl: EnumDeclaration =
       annottees match {
-        case tree @ List(q"class $enumType { ..$body }") =>
+        case tree @ List(q"$mods class $enumType extends ..$parents { ..$body }") =>
           new PlainEnumDeclaration(enumType, body.flatMap {
             case q"""val $value = Value""" => value :: Nil
             case _ => Nil
-          })
-        case tree @ List(q"class $enumType(..$params) { ..$body }") =>
+          }, mods, parents)
+        case tree @ List(q"$mods class $enumType(..$params) extends ..$parents { ..$body }") =>
           new ParametricEnumDeclaration(
             enumType = enumType,
             params = declaredParams(params),
             valueDecls = body.collect {
               case q"""val $value = Value(..$vparams)""" =>
                 new ValueDecl(value, vparams)
-            }
+            },
+            mods = mods,
+            parents = parents
           )
+        case _ => { c.abort(annottees.head.pos, "unsupported form of class declaration for @enum"); return annottees.head }
       }
     if (debug) println(showCode(decl.result))
     decl.validate
