@@ -67,7 +67,7 @@ class EnumMacros(val c: whitebox.Context) {
       q"""case object $name extends $enumType($index, ${s"$name"})"""
   }
 
-  class ValueDecl(val name: TermName, val args: List[Tree])
+  class ValueDecl(val name: TermName, val args: List[Tree], val pos: Position)
 
   class ParametricEnumDeclaration(
       val enumType: TypeName,
@@ -95,9 +95,9 @@ class EnumMacros(val c: whitebox.Context) {
 
     protected def value(name: TermName, index: Int): Tree = {
       val vd = valueDecls.find(_.name == name).getOrElse(???)
-      q"""
+      setPos(q"""
         case object $name extends $enumType(..${vd.args}, $index, ${s"$name"})
-      """
+      """, vd.pos)
     }
   }
 
@@ -124,16 +124,21 @@ class EnumMacros(val c: whitebox.Context) {
       annottees match {
         case tree @ List(q"$mods class $enumType extends ..$parents { ..$body }") =>
           new PlainEnumDeclaration(enumType, body.flatMap {
+            case q"""val $value = Value()""" => value :: Nil
+            case v @ q"""val $value = Value(..$vparams)""" => {
+              c.error(v.pos, s"too many arguments for constructor $enumType"); None
+            }
             case q"""val $value = Value""" => value :: Nil
-            case _ => Nil
           }, mods, parents)
         case tree @ List(q"$mods class $enumType(..$params) extends ..$parents { ..$body }") =>
           new ParametricEnumDeclaration(
             enumType = enumType,
             params = declaredParams(params),
             valueDecls = body.collect {
-              case q"""val $value = Value(..$vparams)""" =>
-                new ValueDecl(value, vparams)
+              case v @ q"""val $value = Value(..$vparams)""" =>
+                new ValueDecl(value, vparams, v.pos)
+              case v @ q"""val $value = Value""" =>
+                new ValueDecl(value, Nil, v.pos)
             },
             mods = mods,
             parents = parents
@@ -143,5 +148,16 @@ class EnumMacros(val c: whitebox.Context) {
     if (debug) println(showCode(decl.result))
     decl.validate
     decl.result
+  }
+
+  /**
+   * Sets the given `position` on `tree` and each of its descendant trees.
+   *
+   * @return `tree`
+   */
+  private[EnumMacros] def setPos(tree: Tree, position: Position): Tree = {
+    val t = c.internal.setPos(tree, position)
+    t.children.foreach { t => setPos(t, position) }
+    t
   }
 }
