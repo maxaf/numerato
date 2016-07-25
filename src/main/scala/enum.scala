@@ -7,18 +7,41 @@ class enum(debug: Boolean = false) extends StaticAnnotation {
   def macroTransform(annottees: Any*): Any = macro EnumMacros.decl
 }
 
-class EnumMacros(val c: whitebox.Context) {
+private[numerato] class EnumMacros(val c: whitebox.Context) {
   import c.universe._
 
-  sealed trait EnumDeclaration {
-    val enumType: TypeName
-    val values: List[TermName]
-    val mods: Modifiers
-    val parents: List[Tree]
+  private[EnumMacros] class ValueDecl(val name: TermName, val args: List[Tree], val pos: Position)
 
-    def validate: Unit
-    protected def base: Tree
-    protected def value(name: TermName, index: Int): Tree
+  private[EnumMacros] class EnumDeclaration(
+      val enumType: TypeName,
+      val params: List[ValDef],
+      val valueDecls: List[ValueDecl],
+      val mods: Modifiers,
+      val parents: List[Tree]
+  ) {
+    val values = valueDecls.map(_.name)
+
+    private val reservedNames = Set("index", "name")
+    def validate = {
+      params.foreach {
+        case param @ q"$mods val ${ TermName(name) }: $tpe = $expr" =>
+          if (reservedNames.contains(name))
+            c.error(param.pos, s"`$name` is reserved & can not be used as a enum field")
+      }
+    }
+
+    private val newMods = Modifiers(mods.flags | Flag.SEALED | Flag.ABSTRACT, mods.privateWithin, mods.annotations)
+    protected def base =
+      q"""
+        $newMods class $enumType(..$params, val index: Int, val name: String)(implicit sealant: ${enumType.toTermName}.Sealant) extends ..$parents with Serializable
+      """
+
+    protected def value(name: TermName, index: Int): Tree = {
+      val vd = valueDecls.find(_.name == name).getOrElse(???)
+      setPos(q"""
+        case object $name extends $enumType(..${vd.args}, $index, ${s"$name"})
+      """, vd.pos)
+    }
 
     protected lazy val lookups: List[Tree] =
       q"""
@@ -49,58 +72,6 @@ class EnumMacros(val c: whitebox.Context) {
     """
   }
 
-  class PlainEnumDeclaration(
-      val enumType: TypeName,
-      val values: List[TermName],
-      val mods: Modifiers,
-      val parents: List[Tree]
-  ) extends EnumDeclaration {
-    def validate = ()
-
-    private val newMods = Modifiers(mods.flags | Flag.SEALED | Flag.ABSTRACT, mods.privateWithin, mods.annotations)
-    protected val base: Tree =
-      q"""
-        $newMods class $enumType(val index: Int, val name: String)(implicit sealant: ${enumType.toTermName}.Sealant) extends ..$parents with Serializable
-      """
-
-    protected def value(name: TermName, index: Int): Tree =
-      q"""case object $name extends $enumType($index, ${s"$name"})"""
-  }
-
-  class ValueDecl(val name: TermName, val args: List[Tree], val pos: Position)
-
-  class ParametricEnumDeclaration(
-      val enumType: TypeName,
-      val params: List[ValDef],
-      val valueDecls: List[ValueDecl],
-      val mods: Modifiers,
-      val parents: List[Tree]
-  ) extends EnumDeclaration {
-    val values = valueDecls.map(_.name)
-
-    private val reservedNames = Set("index", "name")
-    def validate = {
-      params.foreach {
-        case param @ q"$mods val ${ TermName(name) }: $tpe = $expr" =>
-          if (reservedNames.contains(name))
-            c.error(param.pos, s"`$name` is reserved & can not be used as a enum field")
-      }
-    }
-
-    private val newMods = Modifiers(mods.flags | Flag.SEALED | Flag.ABSTRACT, mods.privateWithin, mods.annotations)
-    protected def base =
-      q"""
-        $newMods class $enumType(..$params, val index: Int, val name: String)(implicit sealant: ${enumType.toTermName}.Sealant) extends ..$parents with Serializable
-      """
-
-    protected def value(name: TermName, index: Int): Tree = {
-      val vd = valueDecls.find(_.name == name).getOrElse(???)
-      setPos(q"""
-        case object $name extends $enumType(..${vd.args}, $index, ${s"$name"})
-      """, vd.pos)
-    }
-  }
-
   private def declaredParams(params: List[ValDef]): List[ValDef] =
     params.map {
       case q"$mods val $pname: $ptype = $pdefault" =>
@@ -123,15 +94,20 @@ class EnumMacros(val c: whitebox.Context) {
     val decl: EnumDeclaration =
       annottees match {
         case tree @ List(q"$mods class $enumType extends ..$parents { ..$body }") =>
-          new PlainEnumDeclaration(enumType, body.flatMap {
-            case q"""val $value = Value()""" => value :: Nil
-            case v @ q"""val $value = Value(..$vparams)""" => {
-              c.error(v.pos, s"too many arguments for constructor $enumType"); None
-            }
-            case q"""val $value = Value""" => value :: Nil
-          }, mods, parents)
+          new EnumDeclaration(
+            enumType = enumType,
+            params = Nil,
+            valueDecls = body.collect {
+              case v @ q"""val $value = Value(..$vparams)""" =>
+                new ValueDecl(value, vparams, v.pos)
+              case v @ q"""val $value = Value""" =>
+                new ValueDecl(value, Nil, v.pos)
+            },
+            mods = mods,
+            parents = parents
+          )
         case tree @ List(q"$mods class $enumType(..$params) extends ..$parents { ..$body }") =>
-          new ParametricEnumDeclaration(
+          new EnumDeclaration(
             enumType = enumType,
             params = declaredParams(params),
             valueDecls = body.collect {
