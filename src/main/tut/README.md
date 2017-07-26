@@ -1,3 +1,7 @@
+# Numerato: easy deluxe enums for Scala
+
+[![Build Status](https://secure.travis-ci.org/maxaf/numerato.png?branch=master)](http://travis-ci.org/maxaf/numerato)
+
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
@@ -18,8 +22,6 @@
   - [Using `numerato` in your project](#using-numerato-in-your-project)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
-
-# Numerato: easy deluxe enums for Scala
 
 _enumerato_, _adj._: Italian for _enumerated_ (sans the extra _e_ because I
 lack the gift of tongues)
@@ -273,7 +275,7 @@ First, add the resolver & dependency to your SBT build:
 ```scala
 resolvers += "maxaf-releases" at s"http://repo.bumnetworks.com/releases/"
 
-libraryDependencies += "com.bumnetworks" %% "numerato" % "0.0.1"
+libraryDependencies += "com.bumnetworks" %% "numerato" % "0.0.2"
 ```
 
 Next, enable macros & add a dependency on Macro Paradise:

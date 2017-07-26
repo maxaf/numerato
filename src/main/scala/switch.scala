@@ -60,8 +60,7 @@ object SwitchMacros {
       val names = uncovered.map { case TermName(name) => name }.toList.sorted.mkString(", ")
       c.error(
         pf.tree.pos,
-        s"not all values of ${etag.tpe} are covered: $names"
-      )
+        s"not all values of ${etag.tpe} are covered: $names")
     }
 
     c.Expr(q"""(e: $etag) => ${pf}.lift.apply(e).getOrElse(???)""")

@@ -22,13 +22,12 @@ private[numerato] class EnumMacros(val c: whitebox.Context) {
     val comment: Option[global.DocComment] = None)
 
   private[EnumMacros] class EnumDeclaration(
-      val enumType: TypeName,
-      val params: List[ValDef],
-      val valueDecls: Seq[ValueDecl],
-      val mods: Modifiers,
-      val parents: List[Tree],
-      val pos: Position
-  ) {
+    val enumType: TypeName,
+    val params: List[ValDef],
+    val valueDecls: Seq[ValueDecl],
+    val mods: Modifiers,
+    val parents: List[Tree],
+    val pos: Position) {
     val values = valueDecls.map(_.name)
 
     private val reservedNames = Set("index", "name")
@@ -156,8 +155,7 @@ private[numerato] class EnumMacros(val c: whitebox.Context) {
             valueDecls = valueDeclarations(body),
             mods = mods,
             parents = parents,
-            pos = tree.head.pos
-          )
+            pos = tree.head.pos)
         case tree @ List(q"$mods class $enumType(..$params) extends ..$parents { ..$body }") =>
           new EnumDeclaration(
             enumType = enumType,
@@ -165,8 +163,7 @@ private[numerato] class EnumMacros(val c: whitebox.Context) {
             valueDecls = valueDeclarations(body),
             mods = mods,
             parents = parents,
-            pos = tree.head.pos
-          )
+            pos = tree.head.pos)
         case x @ List(_) => { c.abort(annottees.head.pos, s"unsupported form of class declaration for @enum: ${x.head.getClass}"); return annottees.head }
         case _ => { c.abort(annottees.head.pos, "unsupported form of class declaration for @enum"); return annottees.head }
       }

@@ -1,3 +1,7 @@
+# Numerato: easy deluxe enums for Scala
+
+[![Build Status](https://secure.travis-ci.org/maxaf/numerato.png?branch=master)](http://travis-ci.org/maxaf/numerato)
+
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
@@ -18,8 +22,6 @@
   - [Using `numerato` in your project](#using-numerato-in-your-project)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
-
-# Numerato: easy deluxe enums for Scala
 
 _enumerato_, _adj._: Italian for _enumerated_ (sans the extra _e_ because I
 lack the gift of tongues)
@@ -80,7 +82,7 @@ scala> @enum(debug = true) class Status {
      |   val Enabled, Disabled = Value
      | }
 {
-  sealed abstract class Status(val index: Int, val name: String)(implicit sealant: Status.Sealant);
+  sealed abstract class Status(val index: Int, val name: String)(implicit sealant: Status.Sealant) extends Serializable;
   object Status {
     @scala.annotation.implicitNotFound(msg = "Enum types annotated with ".+("@enum can not be extended directly. To add another value to the enum, ").+("please adjust your `def ... = Value` declaration.")) sealed abstract protected class Sealant;
     implicit protected object Sealant extends Sealant;
@@ -193,7 +195,7 @@ scala> import Status._
 import Status._
 
 scala> val statuses = Enabled :: Disabled :: Enabled :: Enabled :: Disabled :: Nil
-statuses: List[Product with Serializable with Status] = List(Enabled, Disabled, Enabled, Enabled, Disabled)
+statuses: List[Status with Product] = List(Enabled, Disabled, Enabled, Enabled, Disabled)
 
 scala> statuses.map(Status switch {
      |   case Status.Disabled => "not working"
@@ -219,7 +221,7 @@ may appear within a `switch` block:
 scala> statuses.map(Status switch {
      |   case Status.Disabled => "not working"
      | })
-<console>:28: error: not all values of Status are covered: Enabled
+<console>:25: error: not all values of Status are covered: Enabled
        statuses.map(Status switch {
                                   ^
 ```
@@ -241,7 +243,7 @@ scala> statuses.map(Status switch {
      |   case s @ Status.Disabled if s.name == "Enabled" => "not working"
      |   case _ => "-unknown-"
      | })
-<console>:29: error: potentially incomplete `Disabled` match - guards not allowed
+<console>:26: error: potentially incomplete `Disabled` match - guards not allowed
          case s @ Status.Disabled if s.name == "Enabled" => "not working"
               ^
 ```
@@ -250,7 +252,7 @@ scala> statuses.map(Status switch {
      |   case Status.Disabled => "not working"
      |   case _ if System.currentTimeMillis % 2 == 0 => "-unknown-"
      | })
-<console>:30: error: potentially incomplete wildcard match - guards not allowed
+<console>:27: error: potentially incomplete wildcard match - guards not allowed
          case _ if System.currentTimeMillis % 2 == 0 => "-unknown-"
               ^
 ```
@@ -329,7 +331,7 @@ First, add the resolver & dependency to your SBT build:
 ```scala
 resolvers += "maxaf-releases" at s"http://repo.bumnetworks.com/releases/"
 
-libraryDependencies += "com.bumnetworks" %% "numerato" % "0.0.1"
+libraryDependencies += "com.bumnetworks" %% "numerato" % "0.0.2"
 ```
 
 Next, enable macros & add a dependency on Macro Paradise:

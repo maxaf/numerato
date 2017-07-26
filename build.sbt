@@ -4,8 +4,9 @@ import macroRevolver._
 
 lazy val baseSettings = Seq(
   organization := "com.bumnetworks",
-  version := "0.0.1",
-  scalaVersion := "2.11.8",
+  version := "0.0.2",
+  scalaVersion := crossScalaVersions.value.head,
+  crossScalaVersions := Seq("2.12.2", "2.11.11"),
   initialCommands := """
     import numerato._
     import scala.reflect.runtime.universe._
@@ -13,13 +14,13 @@ lazy val baseSettings = Seq(
   scalacOptions ++= Seq(
     "-deprecation",
     "-unchecked",
-    "-feature")) ++ scalariformSettings ++ tutSettings
+    "-feature")) ++ scalariformSettings
 
 lazy val deps = Seq(
  libraryDependencies ++= Seq(
     "org.scala-lang" % "scala-compiler" % scalaVersion.value,
-    "org.specs2" %% "specs2-core" % "3.7.2" % "test",
-    "org.specs2" %% "specs2-matcher-extra" % "3.7.2" % "test"))
+    "org.specs2" %% "specs2-core" % "3.9.1" % "test",
+    "org.specs2" %% "specs2-matcher-extra" % "3.9.1" % "test"))
 
 lazy val publishSettings = Seq(
   publishTo <<= (version) {
@@ -39,6 +40,7 @@ lazy val core = project
   .settings(MacroRevolverPlugin.useMacroParadise)
   .settings(deps)
   .settings(name := "numerato", moduleName := "numerato")
+  .enablePlugins(TutPlugin)
   .settings(updateReadme := {
     val README = "README.md"
     tut.value.foreach {
